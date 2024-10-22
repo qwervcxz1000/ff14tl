@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js" id="jquery-js"></script>
+	<link rel="shortcut icon" type="image/x-icon" href="./favicon.ico">
+	<script src="js/garlic.js" id="jquery-js"></script>
+	<title>FF14カンペ</title>
+</head>
+<body>
+	<header>
+		<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark p-1">
+			<span class="navbar-brand">FF14カンペ</span>
+		</nav>
+	</header>
+	<main role="main" class="flex-shrink-0">
+		<div class="container" style="padding: 54px 0 0;">
+			<div class="row">
+				<div class="col-2">
+					<div id="timer">
+						<p id="time" style="display:none;"></p>
+						<p id="le_time">00:00</p>
+						<div id="buttons">
+							<input id="start" type="button" value="start">
+							<input id="reset" type="button" value="reset">
+						</div>
+					</div>
+					<p></p>
+					<div id="content">
+						<form data-persist="garlic" id="ff14">
+							<p>コンテンツ選択</p>
+							<select id="ff14_con" name="ff14_con" class="garlic-auto-save">
+							</select>
+							<div style="height:5px;"></div>
+							<p>カウントダウン</p>
+							<select id="count_time" name="count_time" class="garlic-auto-save">
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3">3</option>
+								<option value="4">4</option>
+								<option value="5">5</option>
+								<option value="6">6</option>
+								<option value="7">7</option>
+								<option value="8">8</option>
+								<option value="9">9</option>
+								<option value="10">10</option>
+								<option value="11">11</option>
+								<option value="12">12</option>
+								<option value="13">13</option>
+								<option value="14">14</option>
+								<option value="15" selected>15</option>
+								<option value="16">16</option>
+								<option value="17">17</option>
+								<option value="18">18</option>
+								<option value="19">19</option>
+								<option value="20">20</option>
+								<option value="21">21</option>
+							</select>
+						</form>
+						<p></p>
+						<form data-persist="garlic">
+							<p>読み上げ設定</p>
+							<select id="voice" name="voice" class="garlic-auto-save">
+								<option value="windows">Windowsデフォ</option>
+								<option value="google">Google日本語</option>
+								<option value="none">音声無し</option>
+							</select>
+						</form>
+					</div>
+				</div>
+				<div class="col-6" style="overflow-y: scroll;height: 573px;" id="paper">
+				</div>
+				<div class="col-4" style="overflow-y: scroll;height: 573px;" id="tl">
+					<table class="table table-hover table-sm" style="table-layout: fixed;">
+						<tbody id="timeline">
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm">
+				</div>
+			</div>
+			<script>
+
+				//タイマーのカウント秒数
+				var timer_lag = 0;
+
+				//コンテンツ設定 ここに入れないと表示されない
+				var ff14_con_data = [
+					{"name" : "テスト用の奴" , "nn" : "demo"},
+					{"name" : "ライトヘビー1" , "nn" : "lh1"},
+					{"name" : "ライトヘビー2" , "nn" : "lh2"},
+					{"name" : "ライトヘビー3" , "nn" : "lh3"},
+					{"name" : "ライトヘビー4" , "nn" : "lh4"},
+					{"name" : "絶アレキ" , "nn" : "alex"},
+					{"name" : "絶オメガ" , "nn" : "omg"},
+				];
+
+				//カンペ表示部分
+				var con_data = new Object();
+				var con_time = new Object();
+				var time_arr = new Object();
+
+				for (let i = 0; i < ff14_con_data.length; i++) {
+					$('#ff14_con').append('<option value="' + ff14_con_data[i].nn+'">' + ff14_con_data[i].name+'</option>');
+				}
+
+				//ライトヘビー1
+				con_time.lh1 = [
+					{"time" : 0, "echo" : 'スタート' , "say" : "スタート"},
+					{"time" : 14 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 15 , "echo" : 'クアドラプルネイル' , "say" : "クアドラプルネイル AoE捨て"},
+					{"time" : 50 , "echo" : 'デュアルネイル', "say" : "デュアルネイル"},
+					{"time" : 83 , "echo" : '分身デュアルネイル' , "say" : "分身デュアルネイル"},
+					{"time" : 89 , "echo" : 'ダブルorクアッドクロウ' , "say" : "ダブルなら北 クアッドなら東"},
+					{"time" : 103 , "echo" : 'リーピング・クアドラプルネイル' , "say" : "リーピングクアドラ"},
+					{"time" : 111 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 112 , "echo" : '分身ダブルorクアッドクロウ' , "say" : "ダブルなら北 クアッドなら東"},
+					{"time" : 123 , "echo" : 'ブラッディースクラッチ' , "say" : "ブラッディースクラッチ 全体"},
+					{"time" : 146 , "echo" : 'マウサーラッシュ' , "say" : "床抜け"},
+					{"time" : 180 , "echo" : 'エレベート・エビセレート' , "say" : "右マーカー付いたら遠い床"},
+					{"time" : 237 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 240 , "echo" : 'キャッタクリスム・ゲイル' , "say" : "キャッタクリスムゲイル"},
+					{"time" : 265 , "echo" : 'リーピング・デュアルネイル' , "say" : "リーピングデュアル"},
+					{"time" : 287 , "echo" : 'リーピング・クアドラプルネイル' , "say" : "リーピングクアドラ"},
+					{"time" : 326 , "echo" : 'リーピング・デュアルネイル' , "say" : "記憶通り処理+頭割り"},
+					{"time" : 350 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 351 , "echo" : 'リーピング・クアドラプルネイル' , "say" : "リーピングクアドラ"},
+					{"time" : 360 , "echo" : '＠薬' , "say" : "くすり"},
+					{"time" : 371 , "echo" : 'ブラッディースクラッチ' , "say" : "ブラッディースクラッチ 全体"},
+					{"time" : 395 , "echo" : 'マウサーラッシュ' , "say" : "床抜け"},
+					{"time" : 428 , "echo" : 'エレベート・エビセレート' , "say" : "マーカー無い人でロール毎散会or頭割り"},
+					{"time" : 493 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 514 , "echo" : 'レイニングキャッツ' , "say" : "レイニングキャッツ とりあえず後ろに下がる"},
+				];
+				con_data.lh1 = [
+					{"e" : '<div id="0"><p>クアドラプルネイル<br />基本8方向散会→タンヒラ処理後DPS十字近づいて捨てからの戻り</p></div>'},
+					{"e" : '<div><p>クアッドは4人 ダブルは2人</p></div>'},
+					{"e" : '<div><p>DPS短い方向</p></div>'},
+				];
+
+				//ライトヘビー2
+				con_time.lh2 = [
+					{"time" : 0, "echo" : 'スタート' , "say" : "スタート"},
+					{"time" : 10 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 11 , "echo" : 'ラブリーコール' , "say" : "ラブリーコール 全体"},
+					{"time" : 18 , "echo" : 'ベノムレインorドロップ', "say" : "ベノムレインorドロップ 覚える"},
+					{"time" : 40 , "echo" : 'ベノムレインorドロップ', "say" : "ベノムレインorドロップ 覚える"},
+					{"time" : 79 , "echo" : 'ライヴ1st' , "say" : "ライヴ1st 見た目通り簡単なやつ"},
+					{"time" : 97 , "echo" : 'ラブコンビネーション' , "say" : "ラブコンビネーション 内外"},
+					{"time" : 169 , "echo" : 'ラブコンビネーション' , "say" : "ラブコンビネーション 内外"},
+					{"time" : 186 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 187 , "echo" : 'ハニー・B・フィナーレ' , "say" : "ハニーBフィナーレ"},
+					{"time" : 210 , "echo" : 'アラームフェロモン' , "say" : "アラームフェロモン 運動会"},
+					{"time" : 254 , "echo" : 'ライヴ2nd' , "say" : "ライヴ2nd 0なら後ろ 1なら離れる"},
+					{"time" : 262 , "echo" : 'ベノムレインorドロップ', "say" : "ベノムレインorドロップ 覚える"},
+					{"time" : 300 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 310 , "echo" : 'ハニー・B・フィナーレ' , "say" : "ハニーBフィナーレ"},
+					{"time" : 329 , "echo" : 'ベノムレインorドロップ', "say" : "ベノムレインorドロップ 覚える"},
+					{"time" : 334 , "echo" : 'アラームフェロモン' , "say" : "アラームフェロモン AoE気合捨て"},
+					{"time" : 360 , "echo" : '＠薬' , "say" : "くすり"},
+					{"time" : 393 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 413 , "echo" : 'ライヴ3rd' , "say" : "ライヴ3rd 内外避けた後にAoE捨て"},
+					{"time" : 420 , "echo" : 'ベノムレインorドロップ', "say" : "ベノムレインorドロップ 覚える"},
+					{"time" : 427 , "echo" : 'ラブコンビネーション' , "say" : "ラブコンビネーション 内外"},
+					{"time" : 447 , "echo" : 'ラブコンビネーション' , "say" : "ラブコンビネーション 内外"},
+					{"time" : 484 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 485 , "echo" : 'ハニー・B・フィナーレ' , "say" : "ハニーBフィナーレ"},
+					{"time" : 515 , "echo" : 'ブラックハート' , "say" : "ブラックハート"},
+					{"time" : 583 , "echo" : '＠アドル' , "say" : "アドル"},
+				];
+				con_data.lh2 = [
+					{"e" : '<div id="0"><p>レインは散会 ドロップは2人受け</p></div>'},
+					{"e" : '<div><p>1stライブ 塔を踏むだけ<br />遠隔はなるべく2で止める</p></div>'},
+					{"e" : '<div><p>2stライブ<br />0なら後ろ 1なら離れてAoEが出ない場合塔踏み</p></div>'},
+					{"e" : '<div><p><s>2stライブ game8<br />0なら前 1なら後ろ</s></p></div>'},
+					{"e" : '<div><p>3rdライブ<br />タンヒラとDPSどっちが先か見る<br />AoEは斜めに捨てる 中央待機組が塔踏み</p></div>'},
+					{"e" : '<div><p>ブラックハート<br />デバフ残り5秒で中央入る</p></div>'},
+				];
+
+				//ライトヘビー3
+				con_time.lh3 = [
+					{"time" : 0, "echo" : 'スタート' ,"say" : "スタート"},
+					{"time" : 11 , "echo" : 'スマッシュインパクト' , "say" : "スマッシュインパクト 全体"},
+					{"time" : 37 , "echo" : 'ダブルラリアット', "say" : "ダブルラリアット 離れて4か8"},
+					{"time" : 47 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 48 , "echo" : 'パワーダイブ' , "say" : "パワーダイブ 距離減衰 4か8"},
+					{"time" : 60 , "echo" : 'スマッシュインパクト' , "say" : "スマッシュインパクト 全体"},
+					{"time" : 76 , "echo" : 'ボンバリアンボム' , "say" : "ボンバリアンボム 飛ばされるだけ"},
+					{"time" : 109 , "echo" : 'ドーピング' , "say" : "ドーピング もくじんタイム"},
+					{"time" : 143 , "echo" : 'ダブルラリアット' , "say" : "ダブルラリアット 内側4か8"},
+					{"time" : 153 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 154 , "echo" : 'パワーダイブ' , "say" : "飛ばされて4か8 "},
+					{"time" : 166 , "echo" : 'スマッシュインパクト' , "say" : "スマッシュインパクト 全体"},
+					{"time" : 205 , "echo" : 'チェーンデスマッチ' , "say" : "チェーンデスマッチ 繋がれてる方に当たる"},
+					{"time" : 226 , "echo" : 'ダブルラリアット' , "say" : "ダブルラリアット 炎の有無見る"},
+					{"time" : 234 , "echo" : 'スマッシュインパクト' , "say" : "スマッシュインパクト 全体"},
+					{"time" : 253 , "echo" : '零式フューズボム' , "say" : "零式フューズボム"},
+					{"time" : 278 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 279 , "echo" : 'パワーダイブ' , "say" : "パワーダイブ 炎の有無見る"},
+					{"time" : 298 , "echo" : 'フューズフィールド' , "say" : "フューズフィールド 足元注意"},
+					{"time" : 360 , "echo" : '＠薬' , "say" : "くすり"},
+					{"time" : 371 , "echo" : 'ドーピング' , "say" : "ドーピング もくじんタイム"},
+					{"time" : 390 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 391 , "echo" : 'ボンバリアンスペシャル' , "say" : "ボンバリアンスペシャル 外内移動"},
+					{"time" : 443 , "echo" : 'チェーンデスマッチ' , "say" : "チェーンデスマッチ 繋がれてる方に当たる"},
+					{"time" : 471 , "echo" : 'パワーダイブ' , "say" : "パワーダイブ 炎の有無見る"},
+					{"time" : 483 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 484 , "echo" : 'スマッシュインパクト' , "say" : "スマッシュインパクト 全体"},
+					{"time" : 517 , "echo" : '極盛り式スピニングファイヤー' , "say" : "極盛り式スピニングファイヤー"},
+					{"time" : 547 , "echo" : 'ダブルラリアット' , "say" : "ダブルラリアット 炎の有無見る"},
+					{"time" : 555 , "echo" : 'スマッシュインパクト' , "say" : "スマッシュインパクト 全体"},
+					{"time" : 576 , "echo" : 'ボンバリアンボム' , "say" : "ボンバリアンボム 飛ばされるだけ"},
+					{"time" : 586 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 638 , "echo" : 'ドーピング' , "say" : "ドーピング もくじんタイム"},
+				];
+				con_data.lh3 = [
+					{"e" : '<div id="0"><p>4か8に気をつける</p></div>'},
+					{"e" : '<div><img src="img/lh/零式フューズ.png" style="height:250px;" /><p>零式フューズボム<br />長いのついたら長いの1つ<br />短いのだと長いの3に散会</p></div>'},
+				];
+
+				//ライトヘビー4
+				con_time.lh4 = [
+					{"time" : 0, "echo" : 'スタート' , "say" : "スタート"},
+					{"time" : 5 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 16 , "echo" : 'ラスオブゼウス 全体' , "say" : "ラスオブゼウス 全体"},
+					{"time" : 75 , "echo" : '円輪ウィッチハント' , "say" : "ウィッチハント"},
+					{"time" : 98 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 99 , "echo" : 'ラスオブゼウス 全体' , "say" : "ラスオブゼウス 全体"},
+					{"time" : 111 , "echo" : 'エレエクトロープ1' , "say" : "エレクトロープ1"},
+					{"time" : 159 , "echo" : 'エレエクトロープ2' , "say" : "エレクトロープ2"},
+					{"time" : 221 , "echo" : 'イオンクラスター' , "say" : "イオンクラスター"},
+					{"time" : 264 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 317 , "echo" : 'エレクトロープ移植' , "say" : "エレクトロープ移植"},
+					{"time" : 360 , "echo" : '＠薬' , "say" : "くすり"},
+					{"time" : 410 , "echo" : '後半開始' , "say" : "後半開始"},
+					{"time" : 411 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 412 , "echo" : 'クロステイル・スペシャル' , "say" : "スペシャル 全体"},
+					{"time" : 457 , "echo" : 'マスタードボム' , "say" : "マスタードボム"},
+					{"time" : 505 , "echo" : 'アズールサンダー' , "say" : "アズールサンダー 全体"},
+					{"time" : 511 , "echo" : 'ブラックサバト【日没】' , "say" : "ブラックサバトにちぼつ"},
+					{"time" : 540 , "echo" : 'ブラックサバト【夜半】' , "say" : "ブラックサバトやはん"},
+					{"time" : 567 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 568 , "echo" : 'ウィケッドサンダー' , "say" : "ウィケッドサンダー 全体"},
+					{"time" : 658 , "echo" : 'マスタードボム' , "say" : "マスタードボム"},
+					{"time" : 682 , "echo" : '＠アドル' , "say" : "アドル"},
+					{"time" : 683 , "echo" : 'アズールサンダー' , "say" : "アズールサンダー 全体"},
+					{"time" : 696 , "echo" : 'ブラックサバト【日出】' , "say" : "ブラックサバトひので"},
+					{"time" : 720 , "echo" : '＠薬' , "say" : "くすり"},
+					{"time" : 749 , "echo" : '剣の舞' , "say" : "つるぎのまい"},
+				];
+				con_data.lh4 = [
+					{"e" : '<div id="etime0"><p>輪円 開幕近づく 踏む 踏まない 踏まない 踏む <br />円輪 開幕離れる 踏まない 踏む 踏む 踏まない</p></div>'},
+					{"e" : '<div><img src="img/lh/エレクトロープ1.png" style="height:180px;" /><p>エレクトロープ1</p></div>'},
+					{"e" : '<div id="etime147"><img src="img/lh/エレクトロープ2.png" style="height:180px;" />多い北A 少ない南C<br /><br /><!--<img src="img/エレクトロープ2-2.png" style="height:180px;" /><br /><br />//--><img src="img/lh/エレクトロープ2-8.png" style="height:350px;" /><p>エレクトロープ2</p></div>'},
+					{"e" : '<div id="etime215"><img src="img/lh/ビーム.png" style="height:250px;" /><p>ビーム 矢印付きが一歩前 DPS右移動</p></div>'},
+					{"e" : '<div id="etime400"><p>後半開始</p></div>'},
+					{"e" : '<div><p>ウィケッドスペシャル<br />炎中央直線 ダブルビーム左右攻撃</p></div>'},
+					{"e" : '<div><p>ブラサバ日没<br />中央集合後 回避するだけ</p></div>'},
+					{"e" : '<div id="etime530"><img src="img/lh/ブラサバ夜半.png" style="height:250px;" /><p>ブラサバ夜半<br />散集 離れる集まる 集散 集まる離れる</p></div>'},
+					{"e" : '<div><p>ブラサバ日の出<br />長い人は塔 DPS南か東<br />短い人反対の色を誘導 DPS時計で見る</p></div>'},
+					{"e" : '<div><p>【剣の舞】<br />MT/D1　ST/D2<br />H1/D3　H2/D4<br />いい感じに散開</p></div>'},
+				];
+
+				//テスト用表示の奴
+				con_time.demo = [
+					{"time" : 0, "echo" : 'スタート' , "say" : "スタート"},
+					{"time" : 10 , "echo" : 'コンテンツ選択部分' , "say" : "コンテンツせんたくぶぶん"},
+					{"time" : 15 , "echo" : 'タイムライン設定' , "say" : "タイムラインせってい"},
+					{"time" : 20 , "echo" : 'カンペ内容設定' , "say" : "カンペないようせってい"},
+				];
+				con_data.demo = [
+					{"e" : '<div id="etime0"><p>時間に応じて動くFF14用カンペ<br />簡易的なシステム説明用のページ</p></div>'},
+					{"e" : '<div id="etime10"><img src="img/demo/demo_1.png" /><p>まずこの項目はコンテンツ選択部分となります<br />nameにコンテンツの日本語表記 <br />nnにシステム上で扱うコンテンツの略称を入力します</p></div>'},
+					{"e" : '<div id="etime15"><img src="img/demo/demo_2.png" style="width:100%;" /><p>con_time.[nn]にてタイムラインの入力を行います<br />timeには開始からの秒数<br />echoにて表記内容<br />sayにて読み上げ内容を入力します<br /><br />ちなみにですがGoogle日本語入力未実装環境で<br />プログラムがどうなるのか調べてないので分かりません</p></div>'},
+					{"e" : '<div id="etime20"><img src="img/demo/demo_3.png" style="width:100%;" /><p>カンペの入力部分です<br />JavaScriptはヒアドキュメントが無いらしく<br />困ったので無理やりな実装をしていますが<br />上から順に表示しているただのHTMLと思って良いです<br /><br />id=&quot;etime秒数&quot;<br />を設定する事で経過時間にスクロールする様に設定出来ます</p></div>'},
+				];
+
+				//絶アレキ
+				con_time.alex = [
+					{"time" : 0, "echo" : 'スタート' , "say" : "スタート"},
+				];
+				con_data.alex = [
+					{"e" : '<div id="etime0"><p>リキッドフェーズ</p><img src="img/alex/leq1.png" style="height:200px;" /> <img src="img/alex/leq2.png" style="height:200px;" /><img src="img/alex/leq3.png" style="height:200px;" /><img src="img/alex/leq4.png" style="height:200px;" /><img src="img/alex/leq5.png" style="height:200px;" /></div>'},
+					{"e" : '<div id="etime100"><p>サイコロ</p><p>奇数外 偶数内 6番目注意</p></div>'},
+					{"e" : '<div id="etime1000"><p>2体フェーズ</p><p>雷北 それ以外D<br />終わったらC南地雷捨て</p><p>ナイサイ</p>フォトン1 カウント2 バリア3 水圧縮4</div>'},
+					{"e" : '<div id="etime2000"><p>3体フェーズ</p><img src="img/alex/3boss1.png" style="height:200px;" /><p>時間停止は北基準で青線TH←→DPS固定</p><img src="img/alex/3boss2.png" style="height:200px;" /><img src="img/alex/3boss3.png" style="height:200px;" /></div>'},
+				];
+
+				//絶オメガ
+				con_time.omg = [
+					{"time" : 0, "echo" : 'スタート' , "say" : "スタート"},
+					{"time" : 0, "echo" : 'P1' , "say" : ""},
+					{"time" : 93, "echo" : '@アドル' , "say" : "アドル"},
+					{"time" : 124, "echo" : 'P2' , "say" : ""},
+					{"time" : 274, "echo" : 'P3' , "say" : ""},
+					{"time" : 461, "echo" : 'P4' , "say" : ""},
+					{"time" : 540, "echo" : 'P5' , "say" : ""},
+				];
+				con_data.omg = [
+					{"e" : '<div id="etime0"><p style="color:#ff0000;">まずPTリストを入れ替えする</p><p>・P1</p><p>塔1→2→3→4<br />線3→4→1→2</p><p>北東H1MTSTD1D2D3D4H2南西</p><img src="img/omg/p1_1.png" style="height:150px;" /></div>'},
+					{"e" : '<div id="etime120"><p>・P2</p><p>開幕女に寄る ミドル近すぎず遠すぎず ファー離す</p><img src="img/omg/p2_nuke.png" style="height:230px;" /><p>男盾足元 女剣正面安置</p></div>'},
+					{"e" : '<div id="etime274"><p>・P3</p><p><span style="color:#0d00ca;">青線シェア</span> <span style="color:#00b954;">緑線サークル</span></p><img src="img/omg/p3_1.png" style="height:230px;" /> <img src="img/omg/p3_2.png" style="height:230px;" /><div style="height:5px;"></div><img src="img/omg/p3_3.png" style="height:230px;" /></div>'},
+					{"e" : '<div id="etime455"><p>・P4</p><img src="img/omg/p4_1.png" style="height:230px;" /></div>'},
+				];
+
+				//メインの処理とか
+				function ff14Cal() {
+					timer_lag = $('#count_time').val() - 7;
+					var now_con = $('#ff14_con').val();
+
+					//カンペ書き込み
+					var paper = "";
+					for (let i = 0; i < con_data[now_con].length; i++) {
+						paper += con_data[now_con][i].e + '<br/>';
+					}
+					$("#paper").html(paper);
+
+					//タイムライン書き込み
+					var timeline = "";
+					time_arr = new Object();
+					for (let i = 0; i < con_time[now_con].length; i++) {
+						timeline += '<tr id="time'+con_time[now_con][i].time+'"><td style="width:15%;">'+ le_time_hex(con_time[now_con][i].time) + '</td><td>' + con_time[now_con][i].echo + '</td></tr>';
+						
+						time_arr[con_time[now_con][i].time+timer_lag] = con_time[now_con][i].say;
+					}
+					$("#timeline").html(timeline);
+				}
+
+				//経過時間を時刻表記に変換
+				function le_time_hex(time) {
+					le_time_o = Math.floor(time / 60);
+					le_time_m = Math.floor(time % 60);
+					if (le_time_o < 10) { le_time_o = "0"+le_time_o;}
+					if (le_time_m < 10) { le_time_m = "0"+le_time_m;}
+					if (le_time_o >= 24) {
+						return '24:00';
+					} else {
+						return le_time_o + ':' + le_time_m;
+					}
+				}
+
+				//ページ読み込み時処理
+				//ff14Cal(); garlic.jsにてonload
+				$("#ff14").on('click keydown keyup keypress change',function () {
+					ff14Cal();
+				})
+
+				//ここからタイマー 適当にサイトから拾ってきた奴
+				const time = document.getElementById('time');
+				const startButton = document.getElementById('start');
+				const resetButton = document.getElementById('reset');
+
+				// 開始時間
+				let startTime;
+				// 停止時間
+				let stopTime = 0;
+				// タイムアウトID
+				let timeoutID;
+
+				var timelock = 0;
+				var scroll_count = 0;
+				var old_xyz = 0;
+
+				// 時間を表示する関数
+				function displayTime() {
+					const currentTime = new Date(Date.now() - startTime + stopTime);
+					const m = String(currentTime.getMinutes()).padStart(2, '0');
+					const s = String(currentTime.getSeconds()).padStart(2, '0');
+					time.textContent = `${m}:${s}`;
+					timeoutID = setTimeout(displayTime, 10);
+					le_time_make = (Number(m)*60+Number(s));
+					le_time.textContent = (le_time_hex(le_time_make));
+					if (timelock != s) {
+						if(time_arr[le_time_make] != undefined) {
+							if (time_arr[le_time_make] != "none") {
+								if ($('#voice').val() == "windows") {
+									$synthes = new SpeechSynthesisUtterance(time_arr[le_time_make]);
+									speechSynthesis.speak($synthes);
+								} else if ($('#voice').val() == "google") {
+									google_say(time_arr[le_time_make]);
+								}
+							}
+							$("#time"+ ( (Number(m)*60+Number(s))-timer_lag )).addClass("table-warning");
+							scroll_count += 1;
+							if (scroll_count >= 2) {
+								$('#tl').scrollTop(32*(scroll_count-2));
+							}
+						}
+						if($('#etime'+( (Number(m)*60+Number(s))-timer_lag )).length) {
+							console.log('#etime'+( (Number(m)*60+Number(s))-timer_lag ));
+							sclollre_xyz = {scrollTop:$('#etime'+( (Number(m)*60+Number(s))-timer_lag )).offset().top};
+							sclollre_xyz.scrollTop = sclollre_xyz.scrollTop - 54 + old_xyz;
+							old_xyz = sclollre_xyz.scrollTop;
+							$("#paper").animate(sclollre_xyz);
+						}
+					}
+					timelock = s;
+				}
+
+				// スタートボタンがクリックされたら時間を進める
+				startButton.addEventListener('click', () => {
+					startButton.disabled = true;
+					resetButton.disabled = false;
+					startTime = Date.now();
+					displayTime();
+				});
+
+				// リセットボタンがクリックされたら時間を0に戻す
+				resetButton.addEventListener('click', function() {
+					clearTimeout(timeoutID);
+					stopTime += (Date.now() - startTime);
+					startButton.disabled = false;
+					resetButton.disabled = true;
+					time.textContent = '00:00';
+					stopTime = 0;
+					ff14Cal();
+					timelock = 0;
+					scroll_count = 0;
+					old_xyz = 0;
+					$('#paper').scrollTop(0);
+					$('#tl').scrollTop(0);
+				});
+
+
+					//ここからGoogle日本語読み上げ処理
+					// 準備 $voicesを取得したいだけなのだけれども
+					$voise        = null;
+					$voiseName    = 'Google 日本語';
+					$voices       = speechSynthesis.getVoices();
+					$synthes      = new SpeechSynthesisUtterance();
+					// SpeechSynthesisUtterance()に時間かかるから様子みる
+					$repeat  = setInterval(function() {
+					if($synthes){
+						$voices  = speechSynthesis.getVoices();
+						// 準備完了 $voicesの中身を見てみる F12
+						$.map($voices, function(n, i){console.log(n.name)});
+						clearInterval($repeat);
+					}
+				}, 300);
+					function google_say(msg){
+						// $voices から $voiseNameを探す
+						$voise = $.grep($voices, function(n, i){return n.name == $voiseName})[0];
+						$synthes.voice = $voise;                  // 音声の設定
+						speechSynthesis.cancel();                 // かぶった読み停止
+						$synthes.text  = msg;                     // 読む内容
+						speechSynthesis.speak($synthes);          // 喋れ
+					}
+			</script>
+		</div>
+	</main>
+	<footer class="footer py-3">
+	</footer>
+</body>
+</html>
